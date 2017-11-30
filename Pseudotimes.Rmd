@@ -5,17 +5,18 @@ output: pdf_document
 ## Group: Kevin Benac, Boying Gong, George Shan, and Tae Won Chung
 
 ```{r setup, include=FALSE}
-
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r message=FALSE}
+```{r message=FALSE, echo=FALSE}
+# install required packages, this chunk is set to `echo=FALSE` to avoid repeated installing
 install.packages("circlize")
 source("https://bioconductor.org/biocLite.R")
 biocLite("ComplexHeatmap")
-biocLite("SingleCellExperiment")
-biocLite("slingshot")
-install.packages("LineagePulse/", repos = NULL, type="source")
+biocLite("BiocStyle")
+biocLite("kstreet13/slingshot")
+install.packages("SingleCellExperiment_1.0.0.tar.gz", repos = NULL, type="source")
+install.packages("LineagePulse_0.99.19.tar.gz", repos = NULL, type="source")
 ```
 
 ```{r}
@@ -28,7 +29,7 @@ require(RColorBrewer)
 library(slingshot)
 
 
-data <- as.matrix(read.table("data/parHSMM.RData", header=TRUE, sep = ""))
+data <- as.matrix(read.table("data/normalisedCountsVariableGenes.txt", header=TRUE, sep = ""))
 dim(data) # Verify this is 4773 by 1656
 data_log <- log2(data+1)
 
@@ -72,10 +73,4 @@ head(cbind(psdt,cluster_vector), 100)
 #Megakaryocytes are rare, so most of lineage 2 is probably pre-erythrocyte (rbc)
 #RBC's are weird in that they lack nuclei and are bascially carriers for hemoglobin, #which means that alot of significant gene expression had to have occured to cause this #cell fate. This is consistent with seeing how DC1 is basically defined by cluster 2 #being apart from the others 
 ```
-
-# LineagePulse
-
-
-
-
 
