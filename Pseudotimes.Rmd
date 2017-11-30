@@ -5,29 +5,32 @@ output: pdf_document
 ## Group: Kevin Benac, Boying Gong, George Shan, and Tae Won Chung
 
 ```{r setup, include=FALSE}
+# run from command line with : Rscript -e "rmarkdown::render('Pseudotimes.Rmd')"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r message=FALSE, echo=FALSE}
-# install required packages, this chunk is set to `echo=FALSE` to avoid repeated installing
+```{r message=FALSE, eval=FALSE, echo=FALSE}
+# install required packages, this chunk is set to `eval=FALSE` to avoid repeated installing
 install.packages("circlize")
+install.packages("dynamicTreeCut")
+install.packages("plot3D")
 source("https://bioconductor.org/biocLite.R")
 biocLite("ComplexHeatmap")
 biocLite("BiocStyle")
+biocLite("destiny")
 biocLite("kstreet13/slingshot")
 install.packages("SingleCellExperiment_1.0.0.tar.gz", repos = NULL, type="source")
 install.packages("LineagePulse_0.99.19.tar.gz", repos = NULL, type="source")
 ```
 
+# Diffusion Map
+
 ```{r}
-### Scratch Board
-
-require(destiny)
-require(plot3D)
-require(dynamicTreeCut)
-require(RColorBrewer)
+library(destiny)
+library(plot3D)
+library(dynamicTreeCut)
+library(RColorBrewer)
 library(slingshot)
-
 
 data <- as.matrix(read.table("data/normalisedCountsVariableGenes.txt", header=TRUE, sep = ""))
 dim(data) # Verify this is 4773 by 1656
@@ -42,14 +45,13 @@ clusters_discrete<-cutreeDynamic(clusters, method="hybrid", distM=as.matrix(dist
 diffmap <- DiffusionMap(data=t(data_log), sigma=0.16, distance = "cosine") # This will take some time
 scatter3D(x=diffmap$DC3, y=diffmap$DC1, z=diffmap$DC2, theta = -110, phi=20, xlab="DC3", ylab="DC1", zlab="DC2",
           colvar=as.numeric(clusters_discrete), col=c("black","purple","magenta","cyan","yellow","blue"), pch=16, cex=0.75)
+```
 
+# Pseudotimes
 
+Notice that there are only two unclustered (cluster=0), so we ignore the third #lineage. Lineage 1 is the lineage for differentiation into white blood cells. Lineage 2 is the lineage for differentiation into red blood cells and Megakaryocytes. Megakaryocytes are rare, so most of lineage 2 is probably pre-erythrocyte (rbc). RBC's are weird in that they lack nuclei and are bascially carriers for hemoglobin, #which means that alot of significant gene expression had to have occured to cause this #cell fate. This is consistent with seeing how DC1 is basically defined by cluster 2 #being apart from the others 
 
-##################
-##Pseudotimes
-##################
-
-
+```{r}
 cluster_vector<-as.vector(clusters_discrete)
 which(cluster_vector==0)
 hist(cluster_vector)
@@ -67,10 +69,6 @@ psdt<-pseudotime(sds)
 
 head(cbind(psdt,cluster_vector), 100)
 
-
-#notice that there are only two unclustered (cluster=0), so we ignore the third #lineage. Lineage 1 is the lineage for differentiation into white blood cells
-#Lineage 2 is the lineage for differentiation into red blood cells and Megakaryocytes
-#Megakaryocytes are rare, so most of lineage 2 is probably pre-erythrocyte (rbc)
-#RBC's are weird in that they lack nuclei and are bascially carriers for hemoglobin, #which means that alot of significant gene expression had to have occured to cause this #cell fate. This is consistent with seeing how DC1 is basically defined by cluster 2 #being apart from the others 
+save(psdt, cluster_vector, file="output/pseudotimes.RData")
 ```
 
