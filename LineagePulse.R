@@ -1,4 +1,8 @@
 
+# install.packages("SingleCellExperiment_1.0.0.tar.gz", repos = NULL, type="source")
+# install.packages("LineagePulse_0.99.19.tar.gz", repos = NULL, type="source")
+library(LineagePulse)
+
 # ========== Read data ==========
 
 normalizedCounts <- as.matrix(read.table("data/normalisedCountsVariableGenes.txt", header=TRUE, sep = ""))

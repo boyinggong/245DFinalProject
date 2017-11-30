@@ -19,8 +19,6 @@ biocLite("ComplexHeatmap")
 biocLite("BiocStyle")
 biocLite("destiny")
 biocLite("kstreet13/slingshot")
-install.packages("SingleCellExperiment_1.0.0.tar.gz", repos = NULL, type="source")
-install.packages("LineagePulse_0.99.19.tar.gz", repos = NULL, type="source")
 ```
 
 # Diffusion Map
