@@ -17,6 +17,11 @@ library(NMF)
 ```
 
 ```{r Functions}
+# to be used for the colors of the heatmap:
+seqPal2 <- colorRampPalette(c("orange", "black", "blue"))(16)
+seqPal2 <- (c("yellow", "gold2", seqPal2))
+seqPal2 <- rev(seqPal2)
+
 plotGenes <- function(objLP, n, type = "mostSig"){
   if (type == "mostSig"){
     orderFac <- 1
@@ -47,7 +52,7 @@ propSig <- function(objLP){
   lines(thresholds, props)
 }
 
-sigGenesHeatmap <- function(objLP, lineageIdx, sig_level = 1e-20, scale = TRUE){
+sigGenesHeatmap <- function(objLP, lineageIdx, scale = TRUE, sig_level = 1e-20){
   res <- objLP$dfResults
   sig_genes <- res[res$padj <= sig_level, "gene"]
   cells <- psdt[!is.na(psdt[, paste0("curve", lineageIdx)]), ]
@@ -55,12 +60,22 @@ sigGenesHeatmap <- function(objLP, lineageIdx, sig_level = 1e-20, scale = TRUE){
   rawCountsSubset <- rawCounts[sig_genes, rownames(cells)]
   logRawCountsSubset <- log(rawCountsSubset+1)
   if (scale){
-    logRawCountsSubset <- t(apply(logRawCountsSubset, 1, function(x) x/max(x)))
+    logRawCountsSubset <- t(scale(t(logRawCountsSubset),scale=TRUE,center=FALSE))
+    # t(apply(logRawCountsSubset, 1, function(x) x/max(x)))
+    m <- max(logRawCountsSubset)
+    qnt <- quantile(logRawCountsSubset, 0.99)
+    brk <- seq(0, qnt, length = 50) 
+    brk <- c(brk, m) 
+    aheatmap(logRawCountsSubset, Colv = NA, breaks = brk, col = seqPal2,
+             annCol = data.frame(time = cells[, paste0("curve", lineageIdx)]),
+             main = paste0(ifelse(scale, "Scaled ", ""), 
+                           "Log Expression (Sig. level ", sig_level, ")"))
+  } else {
+    aheatmap(logRawCountsSubset, Colv = NA, col = seqPal2,
+             annCol = data.frame(time = cells[, paste0("curve", lineageIdx)]),
+             main = paste0(ifelse(scale, "Scaled ", ""), 
+                           "Log Expression (Sig. level ", sig_level, ")"))
   }
-  dim(logRawCountsSubset)
-  aheatmap(logRawCountsSubset, Colv = NA, 
-           annCol = data.frame(time = cells[, paste0("curve", lineageIdx)]),
-           main = paste0(ifelse(scale, "Scaled ", ""), "Log Expression"))
 }
 ```
 
@@ -92,9 +107,9 @@ load("output/lineage1.RData")
 propSig(objLP)
 ```
 
-### Heatmap of most significant genes
+### Heatmap of significant genes
 
-```{r, message=FALSE}
+```{r, message=FALSE, fig.width=10, fig.height=8, out.width='80%'}
 sigGenesHeatmap(objLP, 1)
 sigGenesHeatmap(objLP, 1, scale = FALSE)
 ```
@@ -126,9 +141,9 @@ load("output/lineage2.RData")
 propSig(objLP)
 ```
 
-### Heatmap of most significant genes
+### Heatmap of significant genes
 
-```{r, message=FALSE}
+```{r, message=FALSE, fig.width=10, fig.height=8, out.width='80%'}
 sigGenesHeatmap(objLP, 1)
 sigGenesHeatmap(objLP, 1, scale = FALSE)
 ```
@@ -148,5 +163,5 @@ plotGenes(objLP, 9, "leastSig")
 
 # Observation
 
-
-`LineagePulse` works well in detecting time-varying genes. However, it is very sensitive to outliers as several of the most significant genes are detected due to outliers (?). 
+- Most of the genes (~70%) are called significant under a commonly used significant level 0.01.
+- `LineagePulse` works well in detecting time-varying genes. However, it is very sensitive to outliers: several of the most significant genes are detected simply due to outliers (?) as shown in the heatmap. 
