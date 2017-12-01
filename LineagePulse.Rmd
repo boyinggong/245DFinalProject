@@ -1,0 +1,152 @@
+---
+title: "LineagePulse"
+author: "Boying"
+date: "11/30/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# run from command line with : Rscript -e "rmarkdown::render('LineagePulse.Rmd')"
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r, message=FALSE}
+library(LineagePulse)
+library(gridExtra)
+library(NMF)
+```
+
+```{r Functions}
+plotGenes <- function(objLP, n, type = "mostSig"){
+  if (type == "mostSig"){
+    orderFac <- 1
+  } else if (type == "leastSig"){
+    orderFac <- -1
+  }
+  ordered_results <- objLP$dfResults
+  ordered_results <- ordered_results[order(orderFac*ordered_results$padj), ]
+
+  mostSigGenes <- list()
+  for (i in 1:n){
+    mostSigGenes[[i]] <- plotGene(objLP = objLP, boolLogPlot = FALSE,
+                               strGeneID=ordered_results[i,]$gene,
+                               boolLineageContour = FALSE)
+  }
+  do.call("grid.arrange", c(mostSigGenes, ncol=3))
+}
+
+propSig <- function(objLP){
+  qvals <- objLP$dfResults$padj
+  thresholds <- seq(-240, -0, by = 2)
+  props <- sapply(10^thresholds, function(x) mean(qvals <= x))
+  cat(paste0(round(props[length(props)-1]*100, 2), "% of the genes are called significant when we require the adjusted p-value to be smaller than 0.01"))
+  
+  plot(thresholds, props, cex = 0.3, 
+       xlab = "log10(q-value)", ylab = "Proportion", 
+       main = "Proportion of genes called significant")
+  lines(thresholds, props)
+}
+
+sigGenesHeatmap <- function(objLP, lineageIdx, sig_level = 1e-20, scale = TRUE){
+  res <- objLP$dfResults
+  sig_genes <- res[res$padj <= sig_level, "gene"]
+  cells <- psdt[!is.na(psdt[, paste0("curve", lineageIdx)]), ]
+  cells <- cells[order(cells[, paste0("curve", lineageIdx)]), ]
+  rawCountsSubset <- rawCounts[sig_genes, rownames(cells)]
+  logRawCountsSubset <- log(rawCountsSubset+1)
+  if (scale){
+    logRawCountsSubset <- t(apply(logRawCountsSubset, 1, function(x) x/max(x)))
+  }
+  dim(logRawCountsSubset)
+  aheatmap(logRawCountsSubset, Colv = NA, 
+           annCol = data.frame(time = cells[, paste0("curve", lineageIdx)]),
+           main = paste0(ifelse(scale, "Scaled ", ""), "Log Expression"))
+}
+```
+
+```{r loadData}
+normalizedCounts <- as.matrix(read.table("data/normalisedCountsVariableGenes.txt", header=TRUE, sep = ""))
+rawCounts <- read.table("data/rawCounts.txt", header=TRUE, sep = "")
+rownames(rawCounts) <- rawCounts$ID
+rawCounts$ID <- NULL
+rawCounts <- as.matrix(rawCounts)
+# subset the raw counts
+rawCounts <- rawCounts[rownames(normalizedCounts), colnames(normalizedCounts)]
+# load the pseudo time data
+load("output/pseudotimes.RData")
+rownames(psdt) <- colnames(normalizedCounts)
+```
+
+
+# Lineage 1
+
+
+```{r LoadDataL1}
+load("output/lineage1.RData")
+# head(objLP$dfResults)
+```
+
+### Percentage of genes called significant as we change q-value threshold
+
+```{r fig.width=5, fig.height=5, out.width='50%'}
+propSig(objLP)
+```
+
+### Heatmap of most significant genes
+
+```{r, message=FALSE}
+sigGenesHeatmap(objLP, 1)
+sigGenesHeatmap(objLP, 1, scale = FALSE)
+```
+
+### Visualization of 9 most significant genes
+
+```{r fig.width=20, fig.height=12, out.width='100%'}
+plotGenes(objLP, 9, "mostSig")
+```
+
+### Visualization of 9 least significant genes
+
+```{r fig.width=20, fig.height=12, out.width='100%', warning=FALSE}
+plotGenes(objLP, 9, "leastSig")
+```
+
+
+# Lineage 2
+
+
+```{r LoadDataL2}
+load("output/lineage2.RData")
+# head(objLP$dfResults)
+```
+
+### Percentage of genes called significant as we change q-value threshold
+
+```{r fig.width=5, fig.height=5, out.width='50%'}
+propSig(objLP)
+```
+
+### Heatmap of most significant genes
+
+```{r, message=FALSE}
+sigGenesHeatmap(objLP, 1)
+sigGenesHeatmap(objLP, 1, scale = FALSE)
+```
+
+### Visualization of 9 most significant genes
+
+```{r fig.width=20, fig.height=12, out.width='100%'}
+plotGenes(objLP, 9, "mostSig")
+```
+
+### Visualization of 9 least significant genes
+
+```{r fig.width=20, fig.height=12, out.width='100%', warning=FALSE}
+plotGenes(objLP, 9, "leastSig")
+```
+
+
+# Observation
+
+
+`LineagePulse` works well in detecting time-varying genes. However, it is very sensitive to outliers as several of the most significant genes are detected due to outliers (?). 
