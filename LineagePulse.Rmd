@@ -130,6 +130,10 @@ sigGenesHeatmapLoess <- function(Pval.adj, lineageIdx, scale = TRUE, nGenes, met
 
 ```{r LoadDataL1}
 load("output/lineage1.RData")
+results <- as.data.frame(objLP$dfResults)
+results <- data.frame(gene = results$gene,
+                      pval_adjusted = results$padj)
+save(results, file = "output/lineage1_results.RData")
 # head(objLP$dfResults)
 ```
 
@@ -145,20 +149,20 @@ Scaled log expression of lineage 1. Heatmap of top 500 significant genes detecte
 
 ```{r, message=FALSE, fig.width=10, fig.height=7, out.width='100%'}
 par(mfrow=c(1, 3))
-layout(matrix(c(1,2,3), 1), widths = c(2, 2, 2.7))
+layout(matrix(c(1,2,3), 1), widths = c(2, 2.7))
 brk = sigGenesHeatmap(objLP, 1, TRUE, 500, "LineagePulse")
-sigGenesHeatmapLoess(PvalP.adj, 1, TRUE, 500, "Loess Parametric", brk, FALSE)
-sigGenesHeatmapLoess(PvalNP.adj, 1, TRUE, 500, "Loess Nonparametric", brk, TRUE)
+sigGenesHeatmapLoess(PvalP.adj, 1, TRUE, 500, "Loess", brk, TRUE)
+# sigGenesHeatmapLoess(PvalNP.adj, 1, TRUE, 500, "Loess Nonparametric", brk, TRUE)
 ```
 
 Log expression of lineage 1. Heatmap of top 500 significant genes detected by three methods.
 
 ```{r, message=FALSE, fig.width=10, fig.height=7, out.width='100%'}
 par(mfrow=c(1, 3))
-layout(matrix(c(1,2,3), 1), widths = c(2, 2, 2.7))
+layout(matrix(c(1,2,3), 1), widths = c(2, 2.7))
 brk = sigGenesHeatmap(objLP, 1, FALSE, 500, "LineagePulse")
-sigGenesHeatmapLoess(PvalP.adj, 1, FALSE, 500, "Loess Parametric", brk, FALSE)
-sigGenesHeatmapLoess(PvalNP.adj, 1, FALSE, 500, "Loess Nonparametric", brk, TRUE)
+sigGenesHeatmapLoess(PvalP.adj, 1, FALSE, 500, "Loess", brk, TRUE)
+# sigGenesHeatmapLoess(PvalNP.adj, 1, FALSE, 500, "Loess Nonparametric", brk, TRUE)
 ```
 
 ### Visualization of 9 most significant genes
@@ -185,11 +189,10 @@ loessP = loessP[1:nGenes, "gene"]
 loessNP = PvalNP.adj[order(PvalNP.adj$L1), ]
 loessNP = loessNP[1:nGenes, "gene"]
 
-  venn.diagram(
+  tmp <- venn.diagram(
     x = list(
-      "Lineage Pulse" = lp, 
-      "Loess Param" = loessP,
-      "Loess Nonparam" = loessNP
+      "LineagePulse" = lp, 
+      "Loess" = loessP
     ),
     filename = paste0("Lineage1.png"),
         output = TRUE ,
@@ -198,10 +201,10 @@ loessNP = loessNP[1:nGenes, "gene"]
    col = "black",
     lty = "dotted",
     lwd = 2.5,
-        height = 1000 , 
-        width = 1000 , 
+        height = 700 , 
+        width = 700 , 
         resolution = 300,
-        fill = c("cornflowerblue", "green", "yellow"),    
+        fill = c("cornflowerblue", "green"),    
     alpha = 0.40,
     cat.cex = 0.6,
    cex = 1.5,
@@ -212,12 +215,46 @@ loessNP = loessNP[1:nGenes, "gene"]
 ```
 
 
+```{r}
+nGenes = 500
+lp = objLP$dfResults
+lp = lp[lp$padj <= 0.01, "gene"]
+loessP = PvalP.adj[PvalP.adj$L1 <= 0.01, "gene"]
+
+  tmp <- venn.diagram(
+    x = list(
+      "LineagePulse" = lp, 
+      "Loess" = loessP
+    ),
+    filename = paste0("Lineage1Sig.png"),
+        output = TRUE ,
+        imagetype="png" ,
+        compression = "lzw",
+   col = "black",
+    lty = "dotted",
+    lwd = 2.5,
+        height = 700 , 
+        width = 700 , 
+        resolution = 300,
+        fill = c("cornflowerblue", "green"),    
+    alpha = 0.40,
+    cat.cex = 0.6,
+   cex = 1.5,
+    main.cex = 1.5,
+    sub.cex = 1.25,
+    cat.fontfamily = "serif"
+  )
+```
+
 # Lineage 2
 
 
 ```{r LoadDataL2}
 load("output/lineage2.RData")
-# head(objLP$dfResults)
+results <- as.data.frame(objLP$dfResults)
+results <- data.frame(gene = results$gene,
+                      pval_adjusted = results$padj)
+save(results, file = "output/lineage2_results.RData")
 ```
 
 ### Percentage of genes called significant as we change q-value threshold
@@ -232,20 +269,20 @@ Scaled log expression of lineage 2. Heatmap of top 500 significant genes detecte
 
 ```{r, message=FALSE, fig.width=10, fig.height=7, out.width='100%'}
 par(mfrow=c(1, 3))
-layout(matrix(c(1,2,3), 1), widths = c(2, 2, 2.7))
+layout(matrix(c(1,2,3), 1), widths = c(2, 2.7))
 brk = sigGenesHeatmap(objLP, 2, TRUE, 500, "LineagePulse")
-sigGenesHeatmapLoess(PvalP.adj, 2, TRUE, 500, "Loess Parametric", brk, FALSE)
-sigGenesHeatmapLoess(PvalNP.adj, 2, TRUE, 500, "Loess Nonparametric", brk, TRUE)
+sigGenesHeatmapLoess(PvalP.adj, 2, TRUE, 500, "Loess Parametric", brk, TRUE)
+# sigGenesHeatmapLoess(PvalNP.adj, 2, TRUE, 500, "Loess Nonparametric", brk, TRUE)
 ```
 
 Log expression of lineage 2. Heatmap of top 500 significant genes detected by three methods.
 
 ```{r, message=FALSE, fig.width=10, fig.height=7, out.width='100%'}
 par(mfrow=c(1, 3))
-layout(matrix(c(1,2,3), 1), widths = c(2, 2, 2.7))
+layout(matrix(c(1,2,3), 1), widths = c(2, 2.7))
 brk = sigGenesHeatmap(objLP, 2, FALSE, 500, "LineagePulse")
-sigGenesHeatmapLoess(PvalP.adj, 2, FALSE, 500, "Loess Parametric", brk, FALSE)
-sigGenesHeatmapLoess(PvalNP.adj, 2, FALSE, 500, "Loess Nonparametric", brk, TRUE)
+sigGenesHeatmapLoess(PvalP.adj, 2, FALSE, 500, "Loess Parametric", brk, TRUE)
+# sigGenesHeatmapLoess(PvalNP.adj, 2, FALSE, 500, "Loess Nonparametric", brk, TRUE)
 ```
 
 ### Visualization of 9 most significant genes
@@ -272,11 +309,10 @@ loessP = loessP[1:nGenes, "gene"]
 loessNP = PvalNP.adj[order(PvalNP.adj$L2), ]
 loessNP = loessNP[1:nGenes, "gene"]
 
-  venn.diagram(
+  tmp <- venn.diagram(
     x = list(
-      "Lineage Pulse" = lp, 
-      "Loess Param" = loessP,
-      "Loess Nonparam" = loessNP
+      "LineagePulse" = lp, 
+      "Loess" = loessP
     ),
     filename = paste0("Lineage2.png"),
         output = TRUE ,
@@ -285,10 +321,41 @@ loessNP = loessNP[1:nGenes, "gene"]
    col = "black",
     lty = "dotted",
     lwd = 2.5,
-        height = 1000 , 
-        width = 1000 , 
+        height = 700 , 
+        width = 700 , 
         resolution = 300,
-        fill = c("cornflowerblue", "green", "yellow"),    
+        fill = c("cornflowerblue", "green"),    
+    alpha = 0.40,
+    cat.cex = 0.6,
+   cex = 1.5,
+    main.cex = 1.5,
+    sub.cex = 1.25,
+    cat.fontfamily = "serif"
+  )
+```
+
+```{r}
+nGenes = 500
+lp = objLP$dfResults
+lp = lp[lp$padj <= 0.01, "gene"]
+loessP = PvalP.adj[PvalP.adj$L2 <= 0.01, "gene"]
+
+  tmp <- venn.diagram(
+    x = list(
+      "LineagePulse" = lp, 
+      "Loess" = loessP
+    ),
+    filename = paste0("Lineage2Sig.png"),
+        output = TRUE ,
+        imagetype="png" ,
+        compression = "lzw",
+   col = "black",
+    lty = "dotted",
+    lwd = 2.5,
+        height = 700 , 
+        width = 700 , 
+        resolution = 300,
+        fill = c("cornflowerblue", "green"),    
     alpha = 0.40,
     cat.cex = 0.6,
    cex = 1.5,
