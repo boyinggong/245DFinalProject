@@ -14,6 +14,8 @@ knitr::opts_chunk$set(echo = FALSE)
 library(LineagePulse)
 library(gridExtra)
 library(NMF)
+library(VennDiagram)
+library(ggplot2)
 ```
 
 ```{r Functions}
@@ -35,7 +37,7 @@ plotGenes <- function(objLP, n, type = "mostSig"){
   for (i in 1:n){
     mostSigGenes[[i]] <- plotGene(objLP = objLP, boolLogPlot = FALSE,
                                strGeneID=ordered_results[i,]$gene,
-                               boolLineageContour = FALSE)
+                               boolLineageContour = FALSE) + theme_bw()
   }
   do.call("grid.arrange", c(mostSigGenes, ncol=3))
 }
@@ -52,9 +54,10 @@ propSig <- function(objLP){
   lines(thresholds, props)
 }
 
-sigGenesHeatmap <- function(objLP, lineageIdx, scale = TRUE, sig_level = 1e-20){
+sigGenesHeatmap <- function(objLP, lineageIdx, scale = TRUE, nGenes, method){
   res <- objLP$dfResults
-  sig_genes <- res[res$padj <= sig_level, "gene"]
+  res <- res[order(res$padj), ]
+  sig_genes <- res[1:nGenes, "gene"]
   cells <- psdt[!is.na(psdt[, paste0("curve", lineageIdx)]), ]
   cells <- cells[order(cells[, paste0("curve", lineageIdx)]), ]
   rawCountsSubset <- rawCounts[sig_genes, rownames(cells)]
@@ -66,16 +69,15 @@ sigGenesHeatmap <- function(objLP, lineageIdx, scale = TRUE, sig_level = 1e-20){
     qnt <- quantile(logRawCountsSubset, 0.99)
     brk <- seq(0, qnt, length = 50) 
     brk <- c(brk, m) 
-    aheatmap(logRawCountsSubset, Colv = NA, breaks = brk, col = seqPal2,
+    aheatmap(logRawCountsSubset, Colv = NA, breaks = brk, col = seqPal2, Rowv = FALSE, labRow = NA, labCol = NA, 
              annCol = data.frame(time = cells[, paste0("curve", lineageIdx)]),
-             main = paste0(ifelse(scale, "Scaled ", ""), 
-                           "Log Expression (Sig. level ", sig_level, ")"))
+             main = method, legend=FALSE, annLegend = FALSE)
   } else {
-    aheatmap(logRawCountsSubset, Colv = NA, col = seqPal2,
+    aheatmap(logRawCountsSubset, Colv = NA, col = seqPal2, Rowv = FALSE, labRow = NA, labCol = NA, 
              annCol = data.frame(time = cells[, paste0("curve", lineageIdx)]),
-             main = paste0(ifelse(scale, "Scaled ", ""), 
-                           "Log Expression (Sig. level ", sig_level, ")"))
+             main = method, legend=FALSE, annLegend = FALSE)
   }
+  return(brk)
 }
 ```
 
@@ -90,6 +92,36 @@ rawCounts <- rawCounts[rownames(normalizedCounts), colnames(normalizedCounts)]
 # load the pseudo time data
 load("output/pseudotimes.RData")
 rownames(psdt) <- colnames(normalizedCounts)
+```
+
+```{r}
+# Load data
+load("output/PvalList.RData")
+PvalP.adj <- as.data.frame(PvalP.adj)
+PvalP.adj$gene <- rownames(normalizedCounts)
+PvalNP.adj <- as.data.frame(PvalNP.adj)
+PvalNP.adj$gene <- rownames(normalizedCounts)
+```
+
+```{r}
+sigGenesHeatmapLoess <- function(Pval.adj, lineageIdx, scale = TRUE, nGenes, method, brk, drawLegend){
+  Pval.adj <- Pval.adj[order(Pval.adj[, lineageIdx]), ]
+  sig_genes <- Pval.adj[1:nGenes, "gene"]
+  cells <- psdt[!is.na(psdt[, paste0("curve", lineageIdx)]), ]
+  cells <- cells[order(cells[, paste0("curve", lineageIdx)]), ]
+  rawCountsSubset <- rawCounts[sig_genes, rownames(cells)]
+  logRawCountsSubset <- log(rawCountsSubset+1)
+  if (scale){
+    logRawCountsSubset <- t(scale(t(logRawCountsSubset),scale=TRUE,center=FALSE))
+    aheatmap(logRawCountsSubset, Colv = NA, breaks = brk, col = seqPal2,  Rowv = FALSE, labRow = NA, labCol = NA, 
+             annCol = data.frame(time = cells[, paste0("curve", lineageIdx)]),
+             main = method, legend=drawLegend, annLegend = drawLegend)
+  } else {
+    aheatmap(logRawCountsSubset, Colv = NA, col = seqPal2,  Rowv = FALSE, labRow = NA, labCol = NA, 
+             annCol = data.frame(time = cells[, paste0("curve", lineageIdx)]),
+             main = method, legend=drawLegend, annLegend = drawLegend)
+  }
+}
 ```
 
 
@@ -109,9 +141,24 @@ propSig(objLP)
 
 ### Heatmap of significant genes
 
-```{r, message=FALSE, fig.width=10, fig.height=8, out.width='80%'}
-sigGenesHeatmap(objLP, 1)
-sigGenesHeatmap(objLP, 1, scale = FALSE)
+Scaled log expression of lineage 1. Heatmap of top 500 significant genes detected by three methods.
+
+```{r, message=FALSE, fig.width=10, fig.height=7, out.width='100%'}
+par(mfrow=c(1, 3))
+layout(matrix(c(1,2,3), 1), widths = c(2, 2, 2.7))
+brk = sigGenesHeatmap(objLP, 1, TRUE, 500, "LineagePulse")
+sigGenesHeatmapLoess(PvalP.adj, 1, TRUE, 500, "Loess Parametric", brk, FALSE)
+sigGenesHeatmapLoess(PvalNP.adj, 1, TRUE, 500, "Loess Nonparametric", brk, TRUE)
+```
+
+Log expression of lineage 1. Heatmap of top 500 significant genes detected by three methods.
+
+```{r, message=FALSE, fig.width=10, fig.height=7, out.width='100%'}
+par(mfrow=c(1, 3))
+layout(matrix(c(1,2,3), 1), widths = c(2, 2, 2.7))
+brk = sigGenesHeatmap(objLP, 1, FALSE, 500, "LineagePulse")
+sigGenesHeatmapLoess(PvalP.adj, 1, FALSE, 500, "Loess Parametric", brk, FALSE)
+sigGenesHeatmapLoess(PvalNP.adj, 1, FALSE, 500, "Loess Nonparametric", brk, TRUE)
 ```
 
 ### Visualization of 9 most significant genes
@@ -124,6 +171,44 @@ plotGenes(objLP, 9, "mostSig")
 
 ```{r fig.width=20, fig.height=12, out.width='100%', warning=FALSE}
 plotGenes(objLP, 9, "leastSig")
+```
+
+### Venn Diagram
+
+```{r}
+nGenes = 500
+lp = objLP$dfResults
+lp = lp[order(lp$padj), ]
+lp = lp[1:nGenes, "gene"]
+loessP = PvalP.adj[order(PvalP.adj$L1), ]
+loessP = loessP[1:nGenes, "gene"]
+loessNP = PvalNP.adj[order(PvalNP.adj$L1), ]
+loessNP = loessNP[1:nGenes, "gene"]
+
+  venn.diagram(
+    x = list(
+      "Lineage Pulse" = lp, 
+      "Loess Param" = loessP,
+      "Loess Nonparam" = loessNP
+    ),
+    filename = paste0("Lineage1.png"),
+        output = TRUE ,
+        imagetype="png" ,
+        compression = "lzw",
+   col = "black",
+    lty = "dotted",
+    lwd = 2.5,
+        height = 1000 , 
+        width = 1000 , 
+        resolution = 300,
+        fill = c("cornflowerblue", "green", "yellow"),    
+    alpha = 0.40,
+    cat.cex = 0.6,
+   cex = 1.5,
+    main.cex = 1.5,
+    sub.cex = 1.25,
+    cat.fontfamily = "serif"
+  )
 ```
 
 
@@ -143,9 +228,24 @@ propSig(objLP)
 
 ### Heatmap of significant genes
 
-```{r, message=FALSE, fig.width=10, fig.height=8, out.width='80%'}
-sigGenesHeatmap(objLP, 1)
-sigGenesHeatmap(objLP, 1, scale = FALSE)
+Scaled log expression of lineage 2. Heatmap of top 500 significant genes detected by three methods.
+
+```{r, message=FALSE, fig.width=10, fig.height=7, out.width='100%'}
+par(mfrow=c(1, 3))
+layout(matrix(c(1,2,3), 1), widths = c(2, 2, 2.7))
+brk = sigGenesHeatmap(objLP, 2, TRUE, 500, "LineagePulse")
+sigGenesHeatmapLoess(PvalP.adj, 2, TRUE, 500, "Loess Parametric", brk, FALSE)
+sigGenesHeatmapLoess(PvalNP.adj, 2, TRUE, 500, "Loess Nonparametric", brk, TRUE)
+```
+
+Log expression of lineage 2. Heatmap of top 500 significant genes detected by three methods.
+
+```{r, message=FALSE, fig.width=10, fig.height=7, out.width='100%'}
+par(mfrow=c(1, 3))
+layout(matrix(c(1,2,3), 1), widths = c(2, 2, 2.7))
+brk = sigGenesHeatmap(objLP, 2, FALSE, 500, "LineagePulse")
+sigGenesHeatmapLoess(PvalP.adj, 2, FALSE, 500, "Loess Parametric", brk, FALSE)
+sigGenesHeatmapLoess(PvalNP.adj, 2, FALSE, 500, "Loess Nonparametric", brk, TRUE)
 ```
 
 ### Visualization of 9 most significant genes
@@ -158,6 +258,44 @@ plotGenes(objLP, 9, "mostSig")
 
 ```{r fig.width=20, fig.height=12, out.width='100%', warning=FALSE}
 plotGenes(objLP, 9, "leastSig")
+```
+
+### Venn Diagram
+
+```{r}
+nGenes = 500
+lp = objLP$dfResults
+lp = lp[order(lp$padj), ]
+lp = lp[1:nGenes, "gene"]
+loessP = PvalP.adj[order(PvalP.adj$L2), ]
+loessP = loessP[1:nGenes, "gene"]
+loessNP = PvalNP.adj[order(PvalNP.adj$L2), ]
+loessNP = loessNP[1:nGenes, "gene"]
+
+  venn.diagram(
+    x = list(
+      "Lineage Pulse" = lp, 
+      "Loess Param" = loessP,
+      "Loess Nonparam" = loessNP
+    ),
+    filename = paste0("Lineage2.png"),
+        output = TRUE ,
+        imagetype="png" ,
+        compression = "lzw",
+   col = "black",
+    lty = "dotted",
+    lwd = 2.5,
+        height = 1000 , 
+        width = 1000 , 
+        resolution = 300,
+        fill = c("cornflowerblue", "green", "yellow"),    
+    alpha = 0.40,
+    cat.cex = 0.6,
+   cex = 1.5,
+    main.cex = 1.5,
+    sub.cex = 1.25,
+    cat.fontfamily = "serif"
+  )
 ```
 
 
